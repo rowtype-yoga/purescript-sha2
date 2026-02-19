@@ -1,3 +1,15 @@
+-- | SHA-2 (FIPS 180-4) cryptographic hash functions: SHA-256 and SHA-224.
+-- |
+-- | Pure PureScript API with Chez Scheme FFI backend using native 32-bit
+-- | fixnum operations for the compression function.
+-- |
+-- | Usage:
+-- | ```purescript
+-- | import Crypto.SHA256 (sha256, toString)
+-- |
+-- | digest = sha256 "hello world"
+-- | hex    = toString digest
+-- | ```
 module Crypto.SHA256
   ( SHA2(..)
   , Digest
@@ -5,6 +17,8 @@ module Crypto.SHA256
   , hash
   , sha256
   , sha224
+  , hmacSha256
+  , hmacSha256Bytes
   , toString
   , fromHex
   , toArray
@@ -27,6 +41,9 @@ foreign import sha256Bv :: ByteArray -> ByteArray
 
 -- | SHA-224 hash: ByteArray → ByteArray (28 bytes)
 foreign import sha224Bv :: ByteArray -> ByteArray
+
+-- | HMAC-SHA256: key → message → MAC (32 bytes)
+foreign import hmacSha256Bv :: ByteArray -> ByteArray -> ByteArray
 
 -- | Convert a PureScript String to a UTF-8 ByteArray.
 foreign import stringToUtf8Bv :: String -> ByteArray
@@ -94,6 +111,21 @@ sha256 = hash SHA2_256
 -- | SHA-224: 224-bit (28-byte) digest.
 sha224 :: forall a. Hashable a => a -> Digest
 sha224 = hash SHA2_224
+
+-------------------------------------------------------------------------------
+-- HMAC-SHA256 (RFC 2104 / RFC 4231)
+-------------------------------------------------------------------------------
+
+-- | HMAC-SHA256 with String key and String message.
+-- | Returns a Digest (32 bytes).
+hmacSha256 :: String -> String -> Digest
+hmacSha256 key msg =
+  Digest (hmacSha256Bv (stringToUtf8Bv key) (stringToUtf8Bv msg))
+
+-- | HMAC-SHA256 with raw byte array key and message.
+hmacSha256Bytes :: Array Int -> Array Int -> Digest
+hmacSha256Bytes key msg =
+  Digest (hmacSha256Bv (arrayToByteArray key) (arrayToByteArray msg))
 
 -------------------------------------------------------------------------------
 -- Serialization

@@ -2,7 +2,7 @@ module Test.SHA256 where
 
 import Prelude
 
-import Crypto.SHA256 (SHA2(..), hash, toString, fromHex)
+import Crypto.SHA256 (SHA2(..), hash, toString, fromHex, hmacSha256, hmacSha256Bytes)
 import Data.Array as A
 import Data.Foldable (for_)
 import Data.Maybe (Maybe(..))
@@ -134,5 +134,40 @@ main = do
     , { name: "fromHex roundtrip"
       , result: show (map toString (fromHex (toString (hash SHA2_256 "abc"))))
       , expected: show (Just (toString (hash SHA2_256 "abc")))
+      }
+
+    -- HMAC-SHA256: RFC 4231 Test Case 1 — key=20×0x0b, data="Hi There"
+    , { name: "HMAC-SHA256 (RFC4231 TC1)"
+      , result: toString (hmacSha256Bytes (A.replicate 20 0x0b) [0x48,0x69,0x20,0x54,0x68,0x65,0x72,0x65])
+      , expected: "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
+      }
+
+    -- HMAC-SHA256: RFC 4231 Test Case 2 — key="Jefe", data="what do ya want for nothing?"
+    , { name: "HMAC-SHA256 (RFC4231 TC2)"
+      , result: toString (hmacSha256 "Jefe" "what do ya want for nothing?")
+      , expected: "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+      }
+
+    -- HMAC-SHA256: RFC 4231 Test Case 3 — key=20×0xaa, data=50×0xdd
+    , { name: "HMAC-SHA256 (RFC4231 TC3)"
+      , result: toString (hmacSha256Bytes (A.replicate 20 0xaa) (A.replicate 50 0xdd))
+      , expected: "773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe"
+      }
+
+    -- HMAC-SHA256: RFC 4231 Test Case 4 — key=0x01..0x19, data=50×0xcd
+    , { name: "HMAC-SHA256 (RFC4231 TC4)"
+      , result: toString (hmacSha256Bytes (A.range 1 25) (A.replicate 50 0xcd))
+      , expected: "82558a389a443c0ea4cc819899f2083a85f0faa3e578f8077a2e3ff46729665b"
+      }
+
+    -- HMAC-SHA256: RFC 4231 Test Case 6 — key=131×0xaa (key > block size)
+    , { name: "HMAC-SHA256 (RFC4231 TC6, long key)"
+      , result: toString (hmacSha256Bytes (A.replicate 131 0xaa)
+          [0x54,0x65,0x73,0x74,0x20,0x55,0x73,0x69,0x6e,0x67,0x20,0x4c
+          ,0x61,0x72,0x67,0x65,0x72,0x20,0x54,0x68,0x61,0x6e,0x20,0x42
+          ,0x6c,0x6f,0x63,0x6b,0x2d,0x53,0x69,0x7a,0x65,0x20,0x4b,0x65
+          ,0x79,0x20,0x2d,0x20,0x48,0x61,0x73,0x68,0x20,0x4b,0x65,0x79
+          ,0x20,0x46,0x69,0x72,0x73,0x74])
+      , expected: "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54"
       }
     ]

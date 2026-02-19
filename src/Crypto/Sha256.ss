@@ -1,7 +1,7 @@
 (optimize-level 3)
 
 (library (Crypto.SHA256 foreign)
-  (export sha256Bv sha224Bv
+  (export sha256Bv sha224Bv hmacSha256Bv
           stringToUtf8Bv bytesToHex hexToByteArray
           arrayToByteArray byteArrayToArray
           eqByteArray byteArrayLength)
@@ -176,6 +176,41 @@
             [w (make-vector 64 0)])
         (sha2-hash! h w msg)
         (hash-to-bv h 7))))
+
+  ;; ── HMAC-SHA256 (RFC 2104 / RFC 4231) ───────────────────────────────────
+  ;; HMAC(K, m) = SHA256( (K' ⊕ opad) || SHA256( (K' ⊕ ipad) || m ) )
+  ;; K' = SHA256(K) if len(K)>64, else K padded with zeros to 64 bytes.
+
+  (define hmacSha256Bv
+    (lambda (key)
+      (lambda (msg)
+        ;; Step 1: normalize key to exactly 64 bytes
+        (let* ([k (if (fx> (bytevector-length key) 64)
+                      (sha256Bv key)
+                      key)]
+               [k-len (bytevector-length k)]
+               [k-padded (make-bytevector 64 0)]
+               [_ (bytevector-copy! k 0 k-padded 0 k-len)]
+               ;; Step 2: build ipad-key and opad-key
+               [ipad-key (make-bytevector 64)]
+               [opad-key (make-bytevector 64)]
+               [_ (do ([i 0 (fx+ i 1)])
+                      ((fx= i 64))
+                    (bytevector-u8-set! ipad-key i
+                      (fxlogxor (bytevector-u8-ref k-padded i) #x36))
+                    (bytevector-u8-set! opad-key i
+                      (fxlogxor (bytevector-u8-ref k-padded i) #x5c)))]
+               ;; Step 3: inner hash = SHA256(ipad-key || message)
+               [msg-len (bytevector-length msg)]
+               [inner-input (make-bytevector (fx+ 64 msg-len))]
+               [_ (bytevector-copy! ipad-key 0 inner-input 0 64)]
+               [_ (bytevector-copy! msg 0 inner-input 64 msg-len)]
+               [inner-hash (sha256Bv inner-input)]
+               ;; Step 4: outer hash = SHA256(opad-key || inner-hash)
+               [outer-input (make-bytevector 96)] ;; 64 + 32
+               [_ (bytevector-copy! opad-key 0 outer-input 0 64)]
+               [_ (bytevector-copy! inner-hash 0 outer-input 64 32)])
+          (sha256Bv outer-input)))))
 
   ;; ── Byte-level utilities (parallel to SHA3.ss) ─────────────────────────
 

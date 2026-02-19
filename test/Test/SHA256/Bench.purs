@@ -2,7 +2,7 @@ module Test.SHA256.Bench where
 
 import Prelude
 
-import Crypto.SHA256 (SHA2(..), hash)
+import Crypto.SHA256 (SHA2(..), hash, hmacSha256Bytes)
 import Data.Array as A
 import Effect (Effect)
 import Effect.Console (log)
@@ -120,6 +120,27 @@ benchSuite = do
     report "SHA-224    " itersV 256 ms224
     ms256 <- timeN itersV (void $ defer \_ -> hash SHA2_256 input)
     report "SHA-256    " itersV 256 ms256
+
+  log "\n── HMAC-SHA256 ───────────────────────────────────────"
+  let itersH = 200
+
+  do
+    let key = A.replicate 32 0xAA
+        msg32 = A.replicate 32 0
+    ms <- timeN itersH (void $ defer \_ -> hmacSha256Bytes key msg32)
+    report "32 B msg   " itersH 32 ms
+
+  do
+    let key = A.replicate 32 0xAA
+        msg256 = A.replicate 256 0
+    ms <- timeN itersH (void $ defer \_ -> hmacSha256Bytes key msg256)
+    report "256 B msg  " itersH 256 ms
+
+  do
+    let key = A.replicate 32 0xAA
+        msg1k = A.replicate 1024 0
+    ms <- timeN itersH (void $ defer \_ -> hmacSha256Bytes key msg1k)
+    report "1 KiB msg  " itersH 1024 ms
 
   log "\n═══════════════════════════════════════════════════════════"
   log "  Done."

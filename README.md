@@ -1,4 +1,4 @@
-# purescript-sha256
+# purescript-sha2
 
 SHA-2 (FIPS 180-4) cryptographic hash functions and HMAC-SHA256 (RFC 2104) for PureScript, with optimized native FFI for the **JavaScript** (Node.js) backend.
 
